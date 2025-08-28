@@ -3,9 +3,12 @@ from flask import Flask, render_template, request, jsonify, session
 import requests
 from chat_formatter import format_for_chat
 from flask_cors import CORS
+from dotenv import load_dotenv
+
+load_dotenv()
 
 app = Flask(__name__, static_folder='static', template_folder='templates')
-app.secret_key = os.getenv("FLASK_SECRET_KEY", "dev-change-me")
+app.secret_key = os.getenv("FLASK_SECRET_KEY", "random_secret_key")
 
 CORS(
     app,
@@ -15,7 +18,7 @@ CORS(
 )
 
 API_URL = "https://router.huggingface.co/novita/v3/openai/chat/completions"
-HF_API_KEY = os.getenv("HF_API_KEY", "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")
+HF_API_KEY = os.getenv("HF_API_KEY")
 HEADERS = {"Authorization": f"Bearer {HF_API_KEY}"}
 
 SYSTEM_PROMPT = (
