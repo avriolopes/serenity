@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Serenity - Your Mental Wellness Companion</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
+  <!-- Ensure newlines render and long links wrap, even if style.css is older -->
+  <style>
+    .bubble{ white-space: pre-wrap; overflow-wrap: anywhere; }
+  </style>
+</head>
+<body>
+  <header class="navbar">
+    <div class="logo">
+      <img src="{{ url_for('static', filename='logo.png') }}" alt="Serenity logo" />
+      <span>Serenity</span>
+    </div>
+    <nav>
+      <ul>
+        <li><a href="#chat">Chat</a></li>
+        <li><a href="#about">About</a></li>
+        <li><a href="#contact">Contact</a></li>
+      </ul>
+    </nav>
+  </header>
+
+  <section class="hero">
+    <div class="hero-inner">
+      <h1>Welcome to Serenity</h1>
+      <p>Your AI companion for emotional support, mindfulness, and mental clarity.</p>
+    </div>
+  </section>
+
+  <main class="chat-card" id="chat">
+    <div class="card-head">
+      <h2>Talk to Serenity</h2>
+      <button id="reset-btn" class="link-btn" title="Start a new conversation">New chat</button>
+    </div>
+
+    <div id="chat-box" aria-live="polite"></div>
+
+    <form id="chat-form" class="input-row" autocomplete="off">
+      <div class="input-wrap">
+        <span class="input-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="11" cy="11" r="7"></circle>
+            <path d="M20 20l-3.5-3.5"></path>
+          </svg>
+        </span>
+        <input id="user-input" type="text" placeholder="How are you feeling today?" aria-label="Message Serenity" />
+      </div>
+      <button id="send-btn" class="send-btn" type="submit" aria-label="Send message">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" aria-hidden="true">
+          <path d="M2 21l21-9L2 3v7l15 2-15 2v7z"></path>
+        </svg>
+        <span>Send</span>
+      </button>
+    </form>
+
+    <div id="spinner" class="spinner" style="display:none"></div>
+  </main>
+
+  <section class="about-section" id="about">
+    <h3>Why Serenity?</h3>
+    <p>Serenity is your confidential and caring AI companion. Whether you are feeling down, anxious, or just need a friend to talk to, Serenity is here to listen and support you.</p>
+    <img src="{{ url_for('static', filename='why-serenity.png') }}" alt="Calm waves illustration" />
+  </section>
+
+  <footer id="contact">
+    <p>support@serenityai.com • © 2025 Serenity AI</p>
+  </footer>
+
+  <script>
+    const form = document.getElementById('chat-form');
+    const input = document.getElementById('user-input');
+    const chatBox = document.getElementById('chat-box');
+    const spinner = document.getElementById('spinner');
+    const sendBtn = document.getElementById('send-btn');
+    const resetBtn = document.getElementById('reset-btn');
+
+    window.addEventListener('DOMContentLoaded', async () => {
+      try{
+        const res = await fetch('/history');
+        const data = await res.json();
+        const history = data.history || [];
+        if(history.length === 0){
+          appendMessage('Serenity', "Hello. I am here to listen and support you. How are you feeling today?");
+        }else{
+          for(const m of history){ appendMessage(m.role === 'user' ? 'You' : 'Serenity', m.content); }
+        }
+      }catch(e){ appendMessage('Serenity', "Hello. I am here to listen and support you. How are you feeling today?"); }
+    });
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const msg = input.value.trim();
+      if (!msg) return;
+      appendMessage('You', msg);
+      input.value = '';
+      await sendMessage(msg);
+    });
+
+    resetBtn.addEventListener('click', async () => {
+      await fetch('/reset', {method:'POST'});
+      chatBox.innerHTML = '';
+      appendMessage('Serenity', "New conversation started. How are you feeling right now?");
+      input.focus();
+    });
+
+    async function sendMessage(message){
+      spinner.style.display = 'inline-block';
+      sendBtn.disabled = true;
+      try{
+        const res = await fetch('/chat', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ message })
+        });
+        const data = await res.json();
+        appendMessage('Serenity', data.reply || 'Sorry, I could not reply.');
+      }catch(err){ appendMessage('Serenity', 'Sorry, there was a problem. Please try again.'); }
+      finally{ spinner.style.display = 'none'; sendBtn.disabled = false; input.focus(); }
+    }
+
+    // New: render text safely and preserve newlines
+    function appendMessage(sender, text){
+      const wrap = document.createElement('div');
+      wrap.className = 'bubble ' + (sender === 'You' ? 'bubble-user' : 'bubble-bot');
+
+      const who = document.createElement('strong');
+      who.textContent = sender + ': ';
+
+      const body = document.createElement('span');
+      body.textContent = text; // keep raw \n; CSS pre-wrap shows them as new lines
+
+      wrap.appendChild(who);
+      wrap.appendChild(body);
+      chatBox.appendChild(wrap);
+      chatBox.scrollTop = chatBox.scrollHeight;
+    }
+  </script>
+</body>
+</html>
